@@ -1,139 +1,73 @@
-<p align="center">
-  <picture>
-      <source media="(prefers-color-scheme: dark)" srcset="docs/assets/logo-dark.svg">
-      <source media="(prefers-color-scheme: light)" srcset="docs/assets/logo-light.svg">
-      <img height="100" alt="Endee" src="docs/assets/logo-dark.svg">
-  </picture>
-</p>
+# AI Semantic Search with Endee
 
-<p align="center">
-    <b>High-performance open-source vector database for AI search, RAG, semantic search, and hybrid retrieval.</b>
-</p>
+This repository contains an AI/ML project that demonstrates a **Semantic Search** application using the [Endee](https://github.com/endee-io/endee) vector database.
 
-<p align="center">
-    <a href="./docs/getting-started.md"><img src="https://img.shields.io/badge/Quick_Start-Local_Setup-success?style=flat-square" alt="Quick Start"></a>
-    <a href="https://docs.endee.io/quick-start"><img src="https://img.shields.io/badge/Docs-Quick_Start-success?style=flat-square" alt="Docs"></a>
-    <a href="https://github.com/endee-io/endee/blob/master/LICENSE"><img src="https://img.shields.io/github/license/endee-io/endee?style=flat-square" alt="License"></a>
-    <a href="https://discord.gg/5HFGqDZQE3"><img src="https://img.shields.io/badge/Discord-Join_Chat-5865F2?logo=discord&style=flat-square" alt="Discord"></a>
-    <a href="https://endee.io/"><img src="https://img.shields.io/badge/Website-Endee-111111?style=flat-square" alt="Website"></a>
-    <!-- <a href="https://endee.io/benchmarks"><img src="https://img.shields.io/badge/Benchmarks-Coming_Soon-1F8B4C?style=flat-square" alt="Benchmarks"></a> -->
-    <!-- <a href="https://endee.io/cloud"><img src="https://img.shields.io/badge/Cloud-Coming_Soon-2496ED?style=flat-square" alt="Cloud"></a> -->
-</p>
+## Project Overview
 
-<p align="center">
-<strong><a href="./docs/getting-started.md">Quick Start</a> • <a href="#why-endee">Why Endee</a> • <a href="#use-cases">Use Cases</a> • <a href="#features">Features</a> • <a href="#api-and-clients">API and Clients</a> • <a href="#docs-and-links">Docs</a> • <a href="#community-and-contact">Contact</a></strong>
-</p>
+The project creates a **Movie Recommendation System** using semantic search. It uses a small dataset of movie plots and matches a user's free-text natural language query (like "A movie about space travel") against the plots to return the most relevant movies. This is a foundational step for building Retrieval-Augmented Generation (RAG) and Agentic AI workflows.
 
-# Endee: Open-Source Vector Database for AI Search
+## System Design
 
-**Endee** is a high-performance open-source vector database built for AI search and retrieval workloads. It is designed for teams building **RAG pipelines**, **semantic search**, **hybrid search**, recommendation systems, and filtered vector retrieval APIs that need production-oriented performance and control.
+1. **Dataset**: A JSON dataset (`dataset.json`) containing movies with their IDs, titles, genres, and textual plots.
+2. **Embedding Model**: We use the `sentence-transformers` open-source model (`all-MiniLM-L6-v2`) to convert movie plots into 384-dimensional dense vectors.
+3. **Vector Database**: We use **Endee**, a high-performance open-source vector database, to store these dense vectors along with the metadata payload (title, genre, plot).
+4. **Retrieval**: When a query is given, it is converted to a vector using the same model. We perform a cosine similarity search against Endee to fetch the most similar matches.
 
-Endee combines vector search with filtering, sparse retrieval support, backup workflows, and deployment flexibility across local builds and Docker-based environments. The project is implemented in C++ and optimized for modern CPU targets, including AVX2, AVX512, NEON, and SVE2.
+## Use of Endee
 
-If you want the fastest path to evaluate Endee locally, start with the [Getting Started guide](./docs/getting-started.md) or the hosted docs at [docs.endee.io](https://docs.endee.io/quick-start).
+Endee is used as the core retrieval engine. The application utilizes the Endee Python SDK (or HTTP REST API equivalent) to:
+- Connect to the local Endee server.
+- Create a collection index named `movies` with dimension `384` and `cosine` distance metric.
+- Upsert dense vectors and their associated `payload` (JSON metadata).
+- Execute `query` commands to retrieve the top matches based on semantic similarity.
 
-## Why Endee
+## Setup Instructions
 
-- Built as a dedicated vector database for AI applications, search systems, and retrieval-heavy workloads.
-- Supports dense vector retrieval plus sparse search capabilities for hybrid search use cases.
-- Includes payload filtering for metadata-aware retrieval and application-specific query logic.
-- Ships with operational features already documented in this repo, including backup flows and runtime observability.
-- Offers flexible deployment paths: local scripts, manual builds, Docker images, and prebuilt registry images.
+### Prerequisites
+1. **Docker**: Ensure Docker is installed to run Endee.
+2. **Python 3.8+**: Ensure you have Python installed.
 
-## Getting Started
-
-The full installation, build, Docker, runtime, and authentication instructions are in [docs/getting-started.md](./docs/getting-started.md).
-
-Fastest local path:
+### 1. Run Endee Database
+First, start the Endee server locally using Docker:
 
 ```bash
-chmod +x ./install.sh ./run.sh
-./install.sh --release --avx2
-./run.sh
+docker run \
+  --ulimit nofile=100000:100000 \
+  -p 8080:8080 \
+  -v ./endee-data:/data \
+  --name endee-server \
+  --restart unless-stopped \
+  endeeio/endee-server:latest
 ```
 
-The server listens on port `8080`. For detailed setup paths, supported operating systems, CPU optimization flags, Docker usage, and authentication examples, use:
+Wait a few seconds for the server to start on `http://localhost:8080`.
 
-- [Getting Started](./docs/getting-started.md)
-- [Hosted Quick Start Docs](https://docs.endee.io/quick-start)
+### 2. Install Project Dependencies
+In a new terminal window, navigate to this project folder.
+It is highly recommended to use a virtual environment:
 
-## Use Cases
+```bash
+python -m venv venv
+source venv/bin/activate
+# On Windows use: venv\Scripts\activate
+```
 
-### RAG and AI Retrieval
+Install the required Python packages:
 
-Use Endee as the retrieval layer for question answering, chat assistants, copilots, and other RAG applications that need fast vector search with metadata-aware filtering.
+```bash
+pip install -r requirements.txt
+```
 
-### Agentic AI and AI Agent Memory
+*(Note: If `endee` Python SDK is available, it will be installed. Otherwise, the script acts via REST fallback.)*
 
-Use Endee as the long-term memory and context retrieval layer for AI agents built with frameworks like LangChain, CrewAI, AutoGen, and LlamaIndex. Store and retrieve past observations, tool outputs, conversation history, and domain knowledge mid-execution with low-latency filtered vector search, so your autonomous agents get the right context without stalling their reasoning loop.
+### 3. Run the Application
+Start the semantic search application:
 
-### Semantic Search
+```bash
+python app.py
+```
 
-Build semantic search experiences for documents, products, support content, and knowledge bases using vector similarity search instead of exact keyword-only matching.
+### Expected Output
+The script will output the loading of the model, upsert the movie dataset into the Endee database, and perform a test query: **"A movie about space travel and saving the world"**.
 
-### Hybrid Search
-
-Combine dense retrieval, sparse vectors, and filtering to improve relevance for search workflows where both semantic understanding and term-level precision matter.
-
-### Recommendations and Matching
-
-Support recommendation, similarity matching, and nearest-neighbor retrieval workflows across text, embeddings, and other high-dimensional representations.
-
-## Features
-
-- **Vector search** for AI retrieval and semantic similarity workloads.
-- **Hybrid retrieval support** with sparse vector capabilities documented in [docs/sparse.md](./docs/sparse.md).
-- **Payload filtering** for structured retrieval logic documented in [docs/filter.md](./docs/filter.md).
-- **Backup APIs and flows** documented in [docs/backup-system.md](./docs/backup-system.md).
-- **Operational logging and instrumentation** documented in [docs/logs.md](./docs/logs.md) and [docs/mdbx-instrumentation.md](./docs/mdbx-instrumentation.md).
-- **CPU-targeted builds** for AVX2, AVX512, NEON, and SVE2 deployments.
-- **Docker deployment options** for local and server environments.
-
-## API and Clients
-
-Endee exposes an HTTP API for managing indexes and serving retrieval workloads. The current repo documentation and examples focus on running the server directly and calling its API endpoints.
-
-Current developer entry points:
-
-- [Getting Started](./docs/getting-started.md) for local build and run flows
-- [Hosted Docs](https://docs.endee.io/quick-start) for product documentation
-- [Release Notes 1.0.0](https://github.com/endee-io/endee/releases/tag/1.0.0) for recent platform changes
-
-## Docs and Links
-
-- [Getting Started](./docs/getting-started.md)
-- [Hosted Documentation](https://docs.endee.io/quick-start)
-- [Release Notes](https://github.com/endee-io/endee/releases/tag/1.0.0)
-- [Sparse Search](./docs/sparse.md)
-- [Filtering](./docs/filter.md)
-- [Backups](./docs/backup-system.md)
-
-## Community and Contact
-
-- Join the community on [Discord](https://discord.gg/5HFGqDZQE3)
-- Visit the website at [endee.io](https://endee.io/)
-- For trademark or branding permissions, contact [enterprise@endee.io](mailto:enterprise@endee.io)
-
-## Contributing
-
-We welcome contributions from the community to help make vector search faster and more accessible for everyone.
-
-- Submit pull requests for fixes, features, and improvements
-- Report bugs or performance issues through GitHub issues
-- Propose enhancements for search quality, performance, and deployment workflows
-
-## License
-
-Endee is open source software licensed under the **Apache License 2.0**. See the [LICENSE](./LICENSE) file for full terms.
-
-## Trademark and Branding
-
-“Endee” and the Endee logo are trademarks of Endee Labs.
-
-The Apache License 2.0 does not grant permission to use the Endee name, logos, or branding in a way that suggests endorsement or affiliation.
-
-If you offer a hosted or managed service based on this software, you must use your own branding and avoid implying it is an official Endee service.
-
-## Third-Party Software
-
-This project includes or depends on third-party software components licensed under their respective open-source licenses. Use of those components is governed by their own license terms.
+You should see matching movies (like *Interstellar*) successfully retrieved by the API based purely on semantic text similarity of their plots!
